@@ -5,13 +5,10 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/lecom/:path*',
-        destination: 'https://api.lecom.com.br/:path*', // A URL base da Lecom
+        destination: 'https://api.lecom.com.br/:path*', // Proxy para API Lecom
       },
     ]
   },
-}
-
-module.exports = {
   allowedDevOrigins: ['172.22.156.95'],
 }
 

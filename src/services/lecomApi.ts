@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from 'axios'
+import { LecomFunction, LecomGroup, LecomUser, UpdateUserPayload } from '@/types/lecom'
+import axios, { AxiosInstance } from 'axios'
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
@@ -9,117 +10,200 @@ const api = axios.create({
   },
 })
 
+// Interceptor para adicionar token nas requisições
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-
   return config
 })
 
-const extractData = (data: any) => {
-  if (data && Array.isArray(data.content)) {
+// Interceptor para tratar erro 401 (token expirado/inválido)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Token inválido ou expirado. Redirecionando para login...')
+      localStorage.removeItem('token')
+      localStorage.removeItem('lecomUser')
+      localStorage.removeItem('tokenExpiresAt')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  },
+)
+
+/**
+ * Extrai dados da resposta da API Lecom.
+ * A API wrapper retorna { content: [...] } para listas paginadas
+ * ou objeto direto para recursos únicos.
+ */
+function extractData(data: any): any {
+  if (!data) return null
+  if (Array.isArray(data.content)) {
     return data.content
-  } else {
-    return [data]
   }
+  return data
+}
+
+function ensureArray<T>(data: any): T[] {
+  if (Array.isArray(data)) return data
+  if (data) return [data]
+  return []
 }
 
 export const lecomService = {
-  findUserByEmail: async (email: string) => {
+  // ===================== USUÁRIOS =====================
+
+  /**
+   * Busca um usuário por e-mail.
+   * Retorna o primeiro usuário encontrado ou null.
+   */
+  findUserByEmail: async (email: string): Promise<LecomUser | null> => {
     try {
       const response = await api.get(`/lecom/user?email=${email}`)
+      const data = extractData(response.data)
 
-      return extractData(response.data)
+      if (Array.isArray(data)) {
+        return data[0] || null
+      }
+      return data || null
     } catch (error) {
-      console.error('Erro ao buscar por e-mail:', error)
+      console.error('❌ Erro ao buscar usuário por e-mail:', error)
+      return null
+    }
+  },
+
+  /**
+   * Obtém dados detalhados de um usuário pelo ID.
+   */
+  getUser: async (id: number): Promise<LecomUser | null> => {
+    try {
+      const response = await api.get(`/service/admin/api/v4/users/${id}`)
+      return response.data || null
+    } catch (error) {
+      console.error('❌ Erro ao buscar usuário:', error)
+      return null
+    }
+  },
+
+  /**
+   * Atualiza dados do usuário via rota BFF (backend-for-frontend).
+   */
+  updateUser: async (id: number, data: UpdateUserPayload): Promise<boolean> => {
+    try {
+      const response = await axios.post('/api/atualizar-usuario', {
+        userId: id,
+        ...data,
+      })
+      return response.data?.success === true
+    } catch (error) {
+      console.error('❌ Erro ao atualizar usuário:', error)
+      throw error
+    }
+  },
+
+  // ===================== FUNÇÕES (PLANTAS) =====================
+
+  /**
+   * Lista todas as funções (plantas) disponíveis no sistema.
+   */
+  getFunctions: async (): Promise<LecomFunction[]> => {
+    try {
+      const response = await api.get('/service/admin/api/v2/functions?size=100')
+      return ensureArray<LecomFunction>(extractData(response.data))
+    } catch (error) {
+      console.error('❌ Erro ao buscar funções:', error)
       return []
     }
   },
 
-  // 2. Obter dados do usuário
-  getUser: async (id: number) => {
-    try {
-      const response = await api.get(`/service/admin/api/v4/users/${id}`)
-      return response.data
-    } catch (error) {
-      console.error(error)
-    }
-  },
-
-  //   // 3. Atualizar dados do usuário
-  //   updateUser: async (id: number, data: any) => {
-  //     return axios.post('/api/atualizar-usuario', {
-  //       userId: id,
-  //       idLeader: data.idLeader,
-  //       email: data.email,
-  //       name: data.name,
-  //       idDepartment: data.idDepartment,
-  //       language: data.language,
-  //       searchAccess: data.searchAccess,
-  //     })
-  //   },
-
-  //   // 4. Listar todas as funções
-  //   getFunctions: async () => {
-  //     const response = await api.get(`/service/admin/api/v2/functions?size=100`)
-  //     return extractData(response.data)
-  //   },
-
-  // 5. Ver funções que o usuário já possui
-  getUserFunctions: async (id: number) => {
+  /**
+   * Retorna as funções (plantas) associadas a um usuário.
+   */
+  getUserFunctions: async (id: number): Promise<LecomFunction[]> => {
     try {
       const response = await api.get(`/service/admin/api/v3/users/${id}/functions`)
-      return extractData(response.data)
+      return ensureArray<LecomFunction>(extractData(response.data))
     } catch (error) {
-      console.error(error)
+      console.error('❌ Erro ao buscar funções do usuário:', error)
+      return []
     }
   },
 
-  // 6. Verifica os grupos do usuário
-  getUserGroups: async (id: number) => {
+  /**
+   * Adiciona uma função (planta) ao usuário via rota BFF.
+   */
+  addFunctionToUser: async (functionId: number, userId: number): Promise<boolean> => {
+    try {
+      const response = await axios.post('/api/adicionar-planta', {
+        userId,
+        functionId,
+      })
+      return response.data?.success === true
+    } catch (error) {
+      console.error('❌ Erro ao adicionar função:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Remove uma função (planta) de um usuário via rota BFF.
+   */
+  removeFunctionFromUser: async (functionId: number, userId: number): Promise<boolean> => {
+    try {
+      const response = await axios.delete('/api/remover-planta', {
+        data: { userId, functionId },
+      })
+      return response.data?.success === true
+    } catch (error) {
+      console.error('❌ Erro ao remover função:', error)
+      throw error
+    }
+  },
+
+  // ===================== GRUPOS =====================
+
+  /**
+   * Retorna os grupos dos quais o usuário faz parte.
+   */
+  getUserGroups: async (id: number): Promise<LecomGroup[]> => {
     try {
       const response = await api.get(`/service/admin/api/v3/users/${id}/groups`)
-      return extractData(response.data)
+      return ensureArray<LecomGroup>(extractData(response.data))
     } catch (error) {
-      console.error(error)
-      return false
+      console.error('❌ Erro ao buscar grupos do usuário:', error)
+      return []
+    }
+  },
+
+  /**
+   * Retorna os grupos onde o usuário é líder.
+   */
+  getUserLeaderGroups: async (id: number): Promise<LecomGroup[]> => {
+    try {
+      const response = await api.get(`/service/admin/api/v3/groups?leaderId=${id}&size=100`)
+      return ensureArray<LecomGroup>(extractData(response.data))
+    } catch (error) {
+      console.error('❌ Erro ao buscar grupos de liderança:', error)
+      return []
+    }
+  },
+
+  /**
+   * Adiciona um usuário a um grupo via rota BFF.
+   */
+  addUserToGroup: async (userId: number, groupId: number): Promise<boolean> => {
+    try {
+      const response = await axios.post('/api/adicionar-usuario-grupo', {
+        groupId,
+        userId,
+      })
+      return response.data?.success === true
+    } catch (error) {
+      console.error('❌ Erro ao adicionar usuário ao grupo:', error)
+      throw error
     }
   },
 }
-
-//   // 7. Verificar se é Lider de algum grupo
-//   getUserLeaderGroups: async (id: number) => {
-//     try {
-//       const response = await api.get(`/service/admin/api/v3/groups?leaderId=${id}&size=100`)
-//       return extractData(response.data)
-//     } catch (error) {
-//       console.error(error)
-//       return false
-//     }
-//   },
-
-//   // 8. Associar função ao usuário
-//   addFunctionToUser: async (functionId: number, userId: number) => {
-//     return axios.post('/api/adicionar-planta', {
-//       userId: userId,
-//       functionId: functionId,
-//     })
-//   },
-//   // 9. Remove função do usuário
-//   removeFunctionFromUser: async (functionId: number, userId: number) => {
-//     return axios.delete('/api/remover-planta', {
-//       data: { userId, functionId },
-//     })
-//   },
-
-//   // 10. Adiciona usuário ao grupo
-//   addUserToGroup: async (userId: number, groupId: number) => {
-//     return axios.post('/api/adicionar-usuario-grupo', {
-//       groupId: groupId,
-//       userId: userId,
-//     })
-//   },
-// }
