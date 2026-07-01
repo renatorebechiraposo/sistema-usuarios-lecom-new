@@ -13,6 +13,30 @@ interface AuthContextType {
   logout: () => void
 }
 
+const getTokenFromUrl = () => {
+  const urlParams = new URLSearchParams(window.location.search)
+
+  return urlParams.get('token')
+}
+
+const getEmailFromToken = (token: string) => {
+  const decoded = jwtDecode<{
+    email: string
+  }>(token)
+
+  return decoded.email
+}
+
+const getUserByEmail = async (email: string) => {
+  return lecomService.findUserByEmail(email)
+}
+
+const storeSession = (user: LecomUser, token: string) => {
+  localStorage.setItem('lecomUser', JSON.stringify(user))
+
+  localStorage.setItem('token', token)
+}
+
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -21,47 +45,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    async function handleAuth() {
-      setIsLoading(true)
-
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-
+    async function initializeSession() {
       try {
-        if (token) {
-          router.push('/dashboard')
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const decoded: any = jwtDecode(token)
+        setIsLoading(true)
 
-          const email = decoded.email
+        const token = getTokenFromUrl()
 
-          if (!email) throw new Error('Token inválido')
-
-          const userData = await lecomService.findUserByEmail(email)
-
-          if (!userData) throw new Error('Usuário não encontrado')
-
-          setUser(userData)
-          localStorage.setItem('lecomUser', JSON.stringify(userData))
-          localStorage.setItem('token', token)
-
-          window.history.replaceState({}, document.title, '/dashboard')
-        } else {
-          // tentar sessão existente
+        if (!token) {
           const storedUser = localStorage.getItem('lecomUser')
+
           if (storedUser) {
             setUser(JSON.parse(storedUser))
           }
+
+          return
         }
+
+        const email = getEmailFromToken(token)
+
+        const user = await getUserByEmail(email)
+
+        if (!user) {
+          throw new Error('Usuário não encontrado')
+        }
+
+        storeSession(user, token)
+
+        setUser(user)
+        router.push('/dashboard')
       } catch (error) {
         console.error(error)
+
         router.push('/login')
       } finally {
         setIsLoading(false)
       }
     }
 
-    handleAuth()
+    initializeSession()
   }, [])
 
   const login = (userData: LecomUser) => {

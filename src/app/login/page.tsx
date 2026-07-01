@@ -3,7 +3,7 @@ import { Button, Image } from 'antd'
 
 export default function Home() {
   const handleMicrosoftLogin = () => {
-    window.location.href = 'https://latamapiinterfacedev.azurewebsites.net/msal/lecom-interface/6/signin/'
+    window.location.href = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL!
   }
 
   return (
