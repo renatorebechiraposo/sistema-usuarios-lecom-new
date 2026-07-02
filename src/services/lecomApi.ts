@@ -2,6 +2,11 @@
 import { LecomFunction, LecomGroup, LecomUser, UpdateUserPayload } from '@/types/lecom'
 import axios, { AxiosInstance } from 'axios'
 
+/**
+ * Instância axios principal.
+ * Todas as chamadas vão para localhost:3000 (sua API BFF).
+ * O token Microsoft é enviado via interceptor.
+ */
 const api: AxiosInstance = axios.create({
   baseURL: 'http://localhost:3000',
   headers: {
@@ -10,7 +15,7 @@ const api: AxiosInstance = axios.create({
   },
 })
 
-// Interceptor para adicionar token nas requisições
+// Adiciona o token Microsoft (JWT) em TODAS as requisições
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -24,7 +29,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.warn('⚠️ Token inválido ou expirado. Redirecionando para login...')
+      console.warn('⚠️ Token Microsoft inválido ou expirado. Redirecionando para login...')
       localStorage.removeItem('token')
       localStorage.removeItem('lecomUser')
       localStorage.removeItem('tokenExpiresAt')
@@ -57,8 +62,7 @@ export const lecomService = {
   // ===================== USUÁRIOS =====================
 
   /**
-   * Busca um usuário por e-mail.
-   * Retorna o primeiro usuário encontrado ou null.
+   * Busca um usuário por e-mail na API via localhost:3000.
    */
   findUserByEmail: async (email: string): Promise<LecomUser | null> => {
     try {
@@ -89,7 +93,7 @@ export const lecomService = {
   },
 
   /**
-   * Atualiza dados do usuário via rota BFF (backend-for-frontend).
+   * Atualiza dados do usuário via rota BFF.
    */
   updateUser: async (id: number, data: UpdateUserPayload): Promise<boolean> => {
     try {
@@ -107,7 +111,7 @@ export const lecomService = {
   // ===================== FUNÇÕES (PLANTAS) =====================
 
   /**
-   * Lista todas as funções (plantas) disponíveis no sistema.
+   * Lista todas as funções (plantas).
    */
   getFunctions: async (): Promise<LecomFunction[]> => {
     try {
@@ -133,7 +137,7 @@ export const lecomService = {
   },
 
   /**
-   * Adiciona uma função (planta) ao usuário via rota BFF.
+   * Adiciona uma função (planta) ao usuário.
    */
   addFunctionToUser: async (functionId: number, userId: number): Promise<boolean> => {
     try {
@@ -149,7 +153,7 @@ export const lecomService = {
   },
 
   /**
-   * Remove uma função (planta) de um usuário via rota BFF.
+   * Remove uma função (planta) de um usuário.
    */
   removeFunctionFromUser: async (functionId: number, userId: number): Promise<boolean> => {
     try {
@@ -192,7 +196,7 @@ export const lecomService = {
   },
 
   /**
-   * Adiciona um usuário a um grupo via rota BFF.
+   * Adiciona um usuário a um grupo.
    */
   addUserToGroup: async (userId: number, groupId: number): Promise<boolean> => {
     try {
