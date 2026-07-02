@@ -1,9 +1,9 @@
-﻿'use client'
+'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { extrairEmailDoToken } from '@/services/lecomApi'
 import { useState } from 'react'
 
-const API_BASE_URL = 'http://localhost:4000'
+const API_BASE_URL = 'http://localhost:3000'
 
 export default function DebugPage() {
   const { token } = useAuth()
@@ -137,7 +137,7 @@ export default function DebugPage() {
               Digite o caminho do endpoint
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span style={{ padding: '6px 0' }}>http://localhost:4000</span>
+              <span style={{ padding: '6px 0' }}>http://localhost:3000</span>
               <input 
                 type="text" 
                 value={apiteste}
