@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { buscarMeuPerfil } from '@/services/lecomApi'
 import { Button, Image, Typography, message } from 'antd'
@@ -43,9 +43,11 @@ export default function HomePage() {
     buscarMeuPerfil(token)
       .then((userData) => {
         console.log('Usuario autenticado:', userData)
+        console.log('userData e array?', Array.isArray(userData))
+        var dadosUsuario = Array.isArray(userData) ? userData[0] : userData
 
         // Salva os dados do usuario no contexto
-        setUser(userData)
+        setUser(dadosUsuario)
 
         // Remove token da URL
         window.history.replaceState({}, '', '/')

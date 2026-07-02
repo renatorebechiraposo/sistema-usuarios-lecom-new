@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { buscarMeuPerfil, extrairEmailDoToken } from '@/services/lecomApi'
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react'
@@ -38,7 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       buscarMeuPerfil(savedToken)
         .then(function(userData) {
           console.log('AuthContext - Dados do usuario carregados:', userData)
-          setUser(userData)
+          console.log('AuthContext - userData e array?', Array.isArray(userData))
+          // Se for array, pega o primeiro elemento
+          var dadosUsuario = Array.isArray(userData) ? userData[0] : userData
+          console.log('AuthContext - dadosUsuario final:', dadosUsuario)
+          setUser(dadosUsuario)
         })
         .catch(function(err) {
           console.error('AuthContext - Erro ao buscar usuario:', err)
