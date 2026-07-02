@@ -1,5 +1,4 @@
-// src/app/page.tsx
-'use client'
+﻿'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { buscarMeuPerfil } from '@/services/lecomApi'
 import { Button, Image, Typography, message } from 'antd'
@@ -10,11 +9,11 @@ const { Title, Text } = Typography
 
 export default function HomePage() {
   const router = useRouter()
-  const { setToken, isAuthenticated, isLoading } = useAuth()
+  const { setToken, setUser, isAuthenticated, isLoading } = useAuth()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Se já estiver autenticado, vai direto pro dashboard
+  // Se ja estiver autenticado, vai direto pro dashboard
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       router.replace('/dashboard')
@@ -29,35 +28,40 @@ export default function HomePage() {
 
     const token = urlToken.trim()
     if (!token) {
-      setError('Token inválido')
+      setError('Token invalido')
       window.history.replaceState({}, '', '/')
       return
     }
 
-    console.log('✅ Token recebido:', token.substring(0, 20) + '...')
+    console.log('Token recebido:', token.substring(0, 20) + '...')
 
     // Salva no contexto
     setToken(token)
 
-    // Testa o token
+    // Testa o token buscando o perfil
     buscarMeuPerfil(token)
       .then((userData) => {
-        console.log('✅ Usuário autenticado:', userData)
-        window.history.replaceState({}, '', '/') // Remove token da URL
+        console.log('Usuario autenticado:', userData)
+        
+        // Salva os dados do usuario no contexto
+        setUser(userData)
+        
+        // Remove token da URL
+        window.history.replaceState({}, '', '/')
         router.push('/dashboard')
       })
       .catch((err) => {
-        console.error('❌ Token inválido:', err)
-        setError('Falha ao autenticar. Token inválido ou expirado.')
+        console.error('Token invalido:', err)
+        setError('Falha ao autenticar. Token invalido ou expirado.')
         window.history.replaceState({}, '', '/')
       })
-  }, [router, setToken])
+  }, [router, setToken, setUser])
 
   const handleMicrosoftLogin = () => {
     const loginUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL
 
     if (!loginUrl) {
-      message.error('URL de autenticação não configurada.')
+      message.error('URL de autenticacao nao configurada.')
       return
     }
 
@@ -65,11 +69,11 @@ export default function HomePage() {
     window.location.replace(loginUrl)
   }
 
-  // Enquanto carrega, não mostra nada (evita flash)
+  // Enquanto carrega, nao mostra nada (evita flash)
   if (isLoading) return null
-  if (isAuthenticated) return null // Vai redirecionar
+  if (isAuthenticated) return null
 
-  // Se tiver token na URL e está processando, mostra loading
+  // Se tiver token na URL e esta processando, mostra loading
   if (
     new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('token')
   ) {
@@ -86,7 +90,6 @@ export default function HomePage() {
   return (
     <div className="w-screen h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#EDF2F7] to-[#DCE6F0]">
       <div className="w-[90%] max-w-5xl h-[70vh] min-h-[500px] flex bg-white rounded-3xl shadow-2xl overflow-hidden">
-        {/* Lado esquerdo - Banner Marelli */}
         <div className="hidden md:flex w-1/2 bg-[#002855] relative overflow-hidden">
           <Image
             src="/images/login/marelli.png"
@@ -99,15 +102,8 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Lado direito - Formulário de Login */}
         <div className="w-full md:w-1/2 h-full flex flex-col justify-center items-center gap-6 p-8 md:p-12">
-          <Image
-            src="/images/login/lecom.png"
-            width={320}
-            alt="Logo Lecom"
-            preview={false}
-            className="mb-4"
-          />
+          <Image src="/images/login/lecom.png" width={320} alt="Logo Lecom" preview={false} className="mb-4" />
           <div className="w-16 h-1 bg-[#002855] rounded-full mb-2" />
 
           <div className="flex flex-col justify-center items-center text-center gap-1">
@@ -115,7 +111,7 @@ export default function HomePage() {
               Welcome
             </Title>
             <Text type="secondary" className="text-sm max-w-xs">
-              Faça login com sua conta Microsoft para acessar o sistema.
+              Faca login com sua conta Microsoft para acessar o sistema.
             </Text>
           </div>
 
@@ -144,7 +140,7 @@ export default function HomePage() {
           </Button>
 
           <Text type="secondary" className="text-xs text-center mt-4 max-w-xs">
-            Apenas usuários autorizados da organização podem acessar este sistema.
+            Apenas usuarios autorizados da organizacao podem acessar este sistema.
           </Text>
         </div>
       </div>
