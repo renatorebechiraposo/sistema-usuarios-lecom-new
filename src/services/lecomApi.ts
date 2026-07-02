@@ -91,6 +91,13 @@ export async function buscarMeuPerfil(token: string) {
     headers: getHeaders(token),
   })
 
+  const data = await response.json()
+
+  // 👇 ADICIONE ISSO TEMPORARIAMENTE
+  console.log('📦 RESPOSTA COMPLETA DA API:')
+  console.log(JSON.stringify(data, null, 2))
+  console.log('🔑 CHAVES:', Object.keys(data))
+
   if (!response.ok) {
     throw new Error(`Erro ao buscar perfil: ${response.status} - ${response.statusText}`)
   }
