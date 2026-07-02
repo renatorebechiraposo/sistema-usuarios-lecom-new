@@ -1,213 +1,155 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { LecomFunction, LecomGroup, LecomUser, UpdateUserPayload } from '@/types/lecom'
-import axios, { AxiosInstance } from 'axios'
+const API_BASE_URL = 'http://localhost:4000'
 
-/**
- * Instância axios principal.
- * Todas as chamadas vão para localhost:3000 (sua API BFF).
- * O token Microsoft é enviado via interceptor.
- */
-const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:3000',
-  headers: {
+interface ApiHeaders {
+  Authorization?: string
+  'Content-Type': string
+}
+
+// Essa função recebe o token e retorna headers prontos
+function getHeaders(token: string | null): ApiHeaders {
+  const headers: ApiHeaders = {
     'Content-Type': 'application/json',
-    Accept: 'application/json',
-  },
-})
+  }
 
-// Adiciona o token Microsoft (JWT) em TODAS as requisições
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`
   }
-  return config
-})
 
-// Interceptor para tratar erro 401 (token expirado/inválido)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      console.warn('⚠️ Token Microsoft inválido ou expirado. Redirecionando para login...')
-      localStorage.removeItem('token')
-      localStorage.removeItem('lecomUser')
-      localStorage.removeItem('tokenExpiresAt')
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  },
-)
-
-/**
- * Extrai dados da resposta da API Lecom.
- * A API wrapper retorna { content: [...] } para listas paginadas
- * ou objeto direto para recursos únicos.
- */
-function extractData(data: any): any {
-  if (!data) return null
-  if (Array.isArray(data.content)) {
-    return data.content
-  }
-  return data
+  return headers
 }
 
-function ensureArray<T>(data: any): T[] {
-  if (Array.isArray(data)) return data
-  if (data) return [data]
-  return []
+// ==========================================
+// USUÁRIO
+// ==========================================
+
+// Buscar usuário pelo e-mail
+// GET /api/Usuario/ObterPorEmail/{email}
+export async function buscarUsuarioPorEmail(token: string, email: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/Usuario/ObterPorEmail/${encodeURIComponent(email)}`,
+    { headers: getHeaders(token) },
+  )
+
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar usuário: ${response.status}`)
+  }
+
+  return response.json()
 }
 
-export const lecomService = {
-  // ===================== USUÁRIOS =====================
+// Pegar perfil do usuário logado (pelo token)
+// GET /api/Usuario/ObterPorToken
+export async function buscarMeuPerfil(token: string) {
+  const response = await fetch(`${API_BASE_URL}/api/Usuario/ObterPorToken`, {
+    headers: getHeaders(token),
+  })
 
-  /**
-   * Busca um usuário por e-mail na API via localhost:3000.
-   */
-  findUserByEmail: async (email: string): Promise<LecomUser | null> => {
-    try {
-      const response = await api.get(`/lecom/user?email=${email}`)
-      const data = extractData(response.data)
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar perfil: ${response.status}`)
+  }
 
-      if (Array.isArray(data)) {
-        return data[0] || null
-      }
-      return data || null
-    } catch (error) {
-      console.error('❌ Erro ao buscar usuário por e-mail:', error)
-      return null
-    }
-  },
+  return response.json()
+}
 
-  /**
-   * Obtém dados detalhados de um usuário pelo ID.
-   */
-  getUser: async (id: number): Promise<LecomUser | null> => {
-    try {
-      const response = await api.get(`/service/admin/api/v4/users/${id}`)
-      return response.data || null
-    } catch (error) {
-      console.error('❌ Erro ao buscar usuário:', error)
-      return null
-    }
-  },
+// Atualizar dados do usuário
+// PUT /api/Usuario/Atualizar
+export async function atualizarUsuario(token: string, dados: any) {
+  const response = await fetch(`${API_BASE_URL}/api/Usuario/Atualizar`, {
+    method: 'PUT',
+    headers: getHeaders(token),
+    body: JSON.stringify(dados),
+  })
 
-  /**
-   * Atualiza dados do usuário via rota BFF.
-   */
-  updateUser: async (id: number, data: UpdateUserPayload): Promise<boolean> => {
-    try {
-      const response = await axios.post('/api/atualizar-usuario', {
-        userId: id,
-        ...data,
-      })
-      return response.data?.success === true
-    } catch (error) {
-      console.error('❌ Erro ao atualizar usuário:', error)
-      throw error
-    }
-  },
+  if (!response.ok) {
+    throw new Error(`Erro ao atualizar: ${response.status}`)
+  }
 
-  // ===================== FUNÇÕES (PLANTAS) =====================
+  return response.json()
+}
 
-  /**
-   * Lista todas as funções (plantas).
-   */
-  getFunctions: async (): Promise<LecomFunction[]> => {
-    try {
-      const response = await api.get('/service/admin/api/v2/functions?size=100')
-      return ensureArray<LecomFunction>(extractData(response.data))
-    } catch (error) {
-      console.error('❌ Erro ao buscar funções:', error)
-      return []
-    }
-  },
+// ==========================================
+// PLANTAS
+// ==========================================
 
-  /**
-   * Retorna as funções (plantas) associadas a um usuário.
-   */
-  getUserFunctions: async (id: number): Promise<LecomFunction[]> => {
-    try {
-      const response = await api.get(`/service/admin/api/v3/users/${id}/functions`)
-      return ensureArray<LecomFunction>(extractData(response.data))
-    } catch (error) {
-      console.error('❌ Erro ao buscar funções do usuário:', error)
-      return []
-    }
-  },
+// Listar todas as plantas
+// GET /api/Planta/ListarTodas
+export async function listarPlantas(token: string) {
+  const response = await fetch(`${API_BASE_URL}/api/Planta/ListarTodas`, {
+    headers: getHeaders(token),
+  })
 
-  /**
-   * Adiciona uma função (planta) ao usuário.
-   */
-  addFunctionToUser: async (functionId: number, userId: number): Promise<boolean> => {
-    try {
-      const response = await axios.post('/api/adicionar-planta', {
-        userId,
-        functionId,
-      })
-      return response.data?.success === true
-    } catch (error) {
-      console.error('❌ Erro ao adicionar função:', error)
-      throw error
-    }
-  },
+  if (!response.ok) {
+    throw new Error(`Erro ao listar plantas: ${response.status}`)
+  }
 
-  /**
-   * Remove uma função (planta) de um usuário.
-   */
-  removeFunctionFromUser: async (functionId: number, userId: number): Promise<boolean> => {
-    try {
-      const response = await axios.delete('/api/remover-planta', {
-        data: { userId, functionId },
-      })
-      return response.data?.success === true
-    } catch (error) {
-      console.error('❌ Erro ao remover função:', error)
-      throw error
-    }
-  },
+  return response.json()
+}
 
-  // ===================== GRUPOS =====================
+// Adicionar planta ao usuário
+// POST /api/Planta/Adicionar/{usuarioId}
+export async function adicionarPlanta(token: string, usuarioId: number, plantaId: number) {
+  const response = await fetch(`${API_BASE_URL}/api/Planta/Adicionar/${usuarioId}`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ plantaId }), // ou só o ID, depende do Swagger
+  })
 
-  /**
-   * Retorna os grupos dos quais o usuário faz parte.
-   */
-  getUserGroups: async (id: number): Promise<LecomGroup[]> => {
-    try {
-      const response = await api.get(`/service/admin/api/v3/users/${id}/groups`)
-      return ensureArray<LecomGroup>(extractData(response.data))
-    } catch (error) {
-      console.error('❌ Erro ao buscar grupos do usuário:', error)
-      return []
-    }
-  },
+  if (!response.ok) {
+    throw new Error(`Erro ao adicionar planta: ${response.status}`)
+  }
 
-  /**
-   * Retorna os grupos onde o usuário é líder.
-   */
-  getUserLeaderGroups: async (id: number): Promise<LecomGroup[]> => {
-    try {
-      const response = await api.get(`/service/admin/api/v3/groups?leaderId=${id}&size=100`)
-      return ensureArray<LecomGroup>(extractData(response.data))
-    } catch (error) {
-      console.error('❌ Erro ao buscar grupos de liderança:', error)
-      return []
-    }
-  },
+  return response.json()
+}
 
-  /**
-   * Adiciona um usuário a um grupo.
-   */
-  addUserToGroup: async (userId: number, groupId: number): Promise<boolean> => {
-    try {
-      const response = await axios.post('/api/adicionar-usuario-grupo', {
-        groupId,
-        userId,
-      })
-      return response.data?.success === true
-    } catch (error) {
-      console.error('❌ Erro ao adicionar usuário ao grupo:', error)
-      throw error
-    }
-  },
+// Remover planta do usuário
+// DELETE /api/Planta/Remover/{usuarioId}/{plantaId}
+export async function removerPlanta(token: string, usuarioId: number, plantaId: number) {
+  const response = await fetch(`${API_BASE_URL}/api/Planta/Remover/${usuarioId}/${plantaId}`, {
+    method: 'DELETE',
+    headers: getHeaders(token),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Erro ao remover planta: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+// ==========================================
+// GRUPOS
+// ==========================================
+
+// Listar grupos do usuário
+// GET /api/Grupo/ListarPorUsuario/{usuarioId}
+export async function listarGruposDoUsuario(token: string, usuarioId: number) {
+  const response = await fetch(`${API_BASE_URL}/api/Grupo/ListarPorUsuario/${usuarioId}`, {
+    headers: getHeaders(token),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Erro ao listar grupos: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+// Adicionar usuário a um grupo
+// POST /api/Grupo/AdicionarUsuario
+export async function adicionarUsuarioAoGrupo(
+  token: string,
+  grupoId: number,
+  emailUsuario: string,
+) {
+  const response = await fetch(`${API_BASE_URL}/api/Grupo/AdicionarUsuario`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ grupoId, email: emailUsuario }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Erro ao adicionar ao grupo: ${response.status}`)
+  }
+
+  return response.json()
 }

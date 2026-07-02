@@ -1,11 +1,25 @@
 'use client'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
-import { lecomService } from '@/services/lecomApi'
-import { LecomFunction, LecomGroup } from '@/types/lecom'
-import { CheckCircleFilled, QuestionCircleOutlined, SafetyCertificateOutlined, TeamOutlined } from '@ant-design/icons'
-import { Avatar, Card, Col, FloatButton, Row, Skeleton, Table, TableColumnsType, Tag, Tour, TourProps, Typography } from 'antd'
-import { useEffect, useRef, useState } from 'react'
+import {
+  CheckCircleFilled,
+  QuestionCircleOutlined,
+  SafetyCertificateOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
+import {
+  Avatar,
+  Card,
+  Col,
+  FloatButton,
+  Row,
+  Skeleton,
+  Table,
+  Tour,
+  TourProps,
+  Typography,
+} from 'antd'
+import { useRef, useState } from 'react'
 
 const { Title, Text } = Typography
 
@@ -20,11 +34,6 @@ export default function UserDashBoard() {
   const [openTour, setOpenTour] = useState(false)
   const [saudacao, setSaudacao] = useState('')
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    functions: [] as LecomFunction[],
-    groups: [] as LecomGroup[],
-    leaderName: 'Não atribuído',
-  })
 
   const handleCloseTour = () => {
     setOpenTour(false)
@@ -34,55 +43,6 @@ export default function UserDashBoard() {
   const handleOpenTourManually = () => {
     setOpenTour(true)
   }
-
-  useEffect(() => {
-    setSaudacao(titulos[Math.floor(Math.random() * titulos.length)])
-  }, [])
-
-  useEffect(() => {
-    async function fetchDashboardData() {
-      if (!user) return
-
-      try {
-        const [functions, userGroups] = await Promise.all([lecomService.getUserFunctions(user.id), lecomService.getUserGroups(user.id)])
-
-        let leaderName = 'Não atribuído'
-        if (user.idLeader) {
-          try {
-            const leader = await lecomService.getUser(user.idLeader)
-            leaderName = leader?.name || 'Gestor não encontrado'
-          } catch {
-            leaderName = 'Gestor não encontrado'
-          }
-        }
-
-        setStats({
-          functions: functions || [],
-          groups: userGroups || [],
-          leaderName,
-        })
-
-        setTimeout(() => {
-          const seenTour = localStorage.getItem('tourDashboardVisto')
-          if (!seenTour) setOpenTour(true)
-        }, 800)
-      } catch (error) {
-        console.error('Erro dashboard', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDashboardData()
-  }, [user])
-
-  const columns: TableColumnsType<LecomGroup> = [
-    {
-      title: 'Nome do Grupo',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text) => <Text>{text}</Text>,
-    },
-  ]
 
   const steps: TourProps['steps'] = [
     {
@@ -124,7 +84,7 @@ export default function UserDashBoard() {
             ) : (
               <div className="mb-8" ref={refHeader}>
                 <Title level={2} style={{ color: '#002140', marginBottom: 0 }}>
-                  {saudacao} <span className="text-blue-600">{user?.name}</span>
+                  {saudacao} <span className="text-blue-600">Teste</span>
                 </Title>
                 <Text type="secondary">Visão geral das suas permissões.</Text>
               </div>
@@ -160,30 +120,20 @@ export default function UserDashBoard() {
                             Gestor Imediato
                           </Text>
                           <Text strong className="text-lg text-[#002140] text-center">
-                            {stats.leaderName}
+                            Leader name
                           </Text>
                         </div>
 
                         {/* Plantas */}
                         <div className="flex-1 w-full">
                           <div className="flex justify-between items-center mb-3">
-                            <Text strong>Plantas Ativas ({stats.functions.length})</Text>
+                            <Text strong>Plantas Ativas</Text>
                             <CheckCircleFilled style={{ color: '#348f00' }} />
                           </div>
                           <div className="bg-gray-50 p-3 rounded-md max-h-37.5 overflow-y-auto border border-gray-100">
-                            {stats.functions.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {stats.functions.map((f) => (
-                                  <Tag key={f.id} color="blue" className="m-0 text-sm py-1 px-3 rounded-full">
-                                    {f.name}
-                                  </Tag>
-                                ))}
-                              </div>
-                            ) : (
-                              <Text type="secondary" className="italic text-sm">
-                                Nenhuma planta ativa.
-                              </Text>
-                            )}
+                            <Text type="secondary" className="italic text-sm">
+                              Nenhuma planta ativa.
+                            </Text>
                           </div>
                         </div>
                       </div>
@@ -211,11 +161,6 @@ export default function UserDashBoard() {
                     ) : (
                       <div className="overflow-hidden rounded-b-lg">
                         <Table
-                          dataSource={stats.groups.map((g) => ({
-                            id: g.id,
-                            name: g.name,
-                          }))}
-                          columns={columns}
                           pagination={{ pageSize: 6 }}
                           rowKey="id"
                           size="small"

@@ -1,4 +1,6 @@
 'use client'
+import { useAuth } from '@/contexts/AuthContext'
+import { buscarMeuPerfil } from '@/services/lecomApi'
 import { Button, Image, Typography, message } from 'antd'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -7,40 +9,59 @@ const { Title, Text } = Typography
 
 export default function LoginPage() {
   const router = useRouter()
+  const { setToken } = useAuth()
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('token')
+    const urlToken = new URLSearchParams(window.location.search).get('token')
 
-    if (!token) return
+    if (!urlToken) return
 
-    fetch('/api/auth/exchange', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    }).then(() => {
+    // 1. Valida o token
+    const token = urlToken.trim()
+    if (!token) {
+      setError('Token inválido')
       window.history.replaceState({}, '', '/login')
-      router.push('/dashboard')
-    })
-  }, [router])
+      return
+    }
+
+    // 2. Salva no contexto (para usar nas chamadas)
+    setToken(token)
+
+    // 3. Testa se o token funciona buscando o perfil
+    buscarMeuPerfil(token)
+      .then((userData) => {
+        console.log('Usuário autenticado:', userData)
+
+        // 4. Limpa a URL (remove o token da URL por segurança)
+        window.history.replaceState({}, '', '/login')
+
+        // 5. Redireciona para o dashboard
+        router.push('/dashboard')
+      })
+      .catch((err) => {
+        console.error('Falha na autenticação:', err)
+        setError('Falha ao autenticar. Token inválido ou expirado.')
+        window.history.replaceState({}, '', '/login')
+      })
+  }, [router, setToken])
 
   const handleMicrosoftLogin = () => {
     const loginUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL
 
     if (!loginUrl) {
-      message.error('URL de autenticação não configurada. Contate o administrador.')
+      message.error('URL de autenticação não configurada.')
       return
     }
 
     setIsRedirecting(true)
-    window.location.href = loginUrl
+    window.location.replace(loginUrl) // replace ao invés de href
   }
 
   return (
-    <div className="w-screen h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#EDF2F7] to-[#DCE6F0]">
-      <div className="w-[90%] max-w-5xl h-[70vh] min-h-[500px] flex bg-white rounded-3xl shadow-2xl overflow-hidden">
+    <div className="w-screen h-screen flex flex-col justify-center items-center bg-linear-to-br from-[#EDF2F7] to-[#DCE6F0]">
+      <div className="w-[90%] max-w-5xl h-[70vh] min-h-125 flex bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Lado esquerdo - Banner Marelli (visível em telas médias+) */}
         <div className="hidden md:flex w-1/2 bg-[#002855] relative overflow-hidden">
           <Image
@@ -57,7 +78,13 @@ export default function LoginPage() {
         {/* Lado direito - Formulário de Login */}
         <div className="w-full md:w-1/2 h-full flex flex-col justify-center items-center gap-6 p-8 md:p-12">
           {/* Logo Lecom */}
-          <Image src="/images/login/lecom.png" width={320} alt="Logo Lecom" preview={false} className="mb-4" />
+          <Image
+            src="/images/login/lecom.png"
+            width={320}
+            alt="Logo Lecom"
+            preview={false}
+            className="mb-4"
+          />
 
           {/* Divisor visual */}
           <div className="w-16 h-1 bg-[#002855] rounded-full mb-2" />

@@ -1,32 +1,13 @@
 'use client'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
-import { useAuth } from '@/contexts/AuthContext'
-import { lecomService } from '@/services/lecomApi'
-import { LecomGroup } from '@/types/lecom'
-import { PlusOutlined, QuestionCircleOutlined, UserAddOutlined } from '@ant-design/icons'
-import {
-  Button,
-  FloatButton,
-  Form,
-  Input,
-  Modal,
-  Skeleton,
-  Table,
-  TableColumnsType,
-  Tour,
-  TourProps,
-  Typography,
-  message,
-} from 'antd'
-import { AxiosError } from 'axios'
-import { useEffect, useRef, useState } from 'react'
+import { QuestionCircleOutlined, UserAddOutlined } from '@ant-design/icons'
+import { FloatButton, Form, Input, Modal, Skeleton, Tour, TourProps, Typography } from 'antd'
+import { useRef, useState } from 'react'
 
 const { Title } = Typography
 
 export default function AdminProfile() {
-  const { user } = useAuth()
-  const [userLeaderGroups, setUserLeaderGroups] = useState<LecomGroup[]>([])
   const [loading, setLoading] = useState(true)
 
   // --- NOVOS ESTADOS PARA O MODAL ---
@@ -51,123 +32,11 @@ export default function AdminProfile() {
     setOpenTour(true)
   }
 
-  const getUserLeaderGroups = async (userId: number) => {
-    setLoading(true)
-    try {
-      // Ajustei para string pois geralmente IDs de usuário vêm como string do contexto
-      const data = await lecomService.getUserLeaderGroups(userId) // Verifique se o método no seu service aceita number ou string
-      setUserLeaderGroups(Array.isArray(data) ? data : [])
-
-      // Abre o tour após carregar os dados (apenas se nunca tiver visto)
-      setTimeout(() => {
-        const jaViu = localStorage.getItem('adminTourVisto')
-        if (!jaViu) setOpenTour(true)
-      }, 800)
-    } catch (error) {
-      console.error(error)
-      message.error('Erro ao carregar grupos.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    // Convertendo para number se seu service exigir number, ou mantendo string se for o caso.
-    // Assumindo que user.id é string e o service pede number baseado no seu código anterior:
-    if (user?.id) {
-      getUserLeaderGroups(Number(user.id))
-    }
-  }, [user])
-
-  // 1. A NOVA FUNÇÃO QUE ABRE O MODAL
-  const handleOpenAddUserModal = (groupId: number) => {
-    setSelectedGroupId(groupId)
-    setIsModalOpen(true)
-  }
-
-  // 2. A FUNÇÃO QUE RODA QUANDO O USUÁRIO CLICA EM "ADICIONAR" NO MODAL
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields()
-      setConfirmLoading(true)
-
-      let userFound
-      if (values && selectedGroupId !== null) {
-        // Busca o usuário antes para pegar o ID correto
-        // Nota: Ajuste conforme o retorno real do seu lecomService.findUserByEmail ou searchUsers
-        const searchResult = await lecomService.findUserByEmail(values.email)
-
-        // Lógica de segurança caso o retorno seja array ou objeto
-        userFound = Array.isArray(searchResult) ? searchResult[0] : searchResult
-
-        if (!userFound) {
-          message.error('Usuário não encontrado.')
-          setConfirmLoading(false)
-          return
-        }
-
-        console.log('Adicionando usuário:', userFound.email, 'ao grupo:', selectedGroupId)
-        await lecomService.addUserToGroup(userFound.id, selectedGroupId)
-      }
-
-      message.success(`O usuário ${userFound.name} foi adicionado ao grupo com sucesso!`)
-
-      setIsModalOpen(false)
-      form.resetFields()
-      setSelectedGroupId(null)
-    } catch (error) {
-      console.error('Erro ao adicionar:', error)
-
-      if (error instanceof AxiosError) {
-        if (error.response?.status === 409) {
-          message.warning('Este usuário já faz parte do grupo.')
-          return
-        }
-
-        if (error.response?.status === 404) {
-          message.error('Usuário não encontrado no sistema.')
-          return
-        }
-      }
-
-      if (typeof error === 'object' && error !== null && !('errorFields' in error)) {
-        message.error('Não foi possível adicionar o usuário. Tente novamente.')
-      }
-    } finally {
-      setConfirmLoading(false)
-    }
-  }
-
   const handleModalCancel = () => {
     setIsModalOpen(false)
     form.resetFields()
     setSelectedGroupId(null)
   }
-
-  const columns: TableColumnsType<LecomGroup> = [
-    {
-      title: 'Nome do grupo',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: 'Ação',
-      key: 'action',
-      width: '15%',
-      render: (_, record) => {
-        return (
-          <Button
-            className="border-blue-500 text-blue-500"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => handleOpenAddUserModal(record.id)}
-          >
-            Adicionar
-          </Button>
-        )
-      },
-    },
-  ]
 
   // --- PASSOS DO TOUR ---
   const tourSteps: TourProps['steps'] = [
@@ -213,16 +82,7 @@ export default function AdminProfile() {
                 <Skeleton active paragraph={{ rows: 6 }} />
               </div>
             ) : (
-              <div ref={refTable}>
-                <Table<LecomGroup>
-                  dataSource={userLeaderGroups}
-                  columns={columns}
-                  pagination={{ pageSize: 14 }}
-                  rowKey="id"
-                  size="small"
-                  // Se quiser manter o loading interno da tabela também em futuras ações, pode deixar: loading={loading}
-                />
-              </div>
+              <div ref={refTable}></div>
             )}
           </div>
         </div>
@@ -236,7 +96,6 @@ export default function AdminProfile() {
           </div>
         }
         open={isModalOpen}
-        onOk={handleModalOk}
         onCancel={handleModalCancel}
         confirmLoading={confirmLoading}
         okText="Adicionar"
