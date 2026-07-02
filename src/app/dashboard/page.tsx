@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
@@ -33,12 +33,7 @@ const { Title, Text } = Typography
 const titulos = ['Ola, ', 'Seja bem-vindo, ', 'Bem-vindo de volta, ']
 
 export default function UserDashBoard() {
-  const { user, userEmail, token } = useAuth()
-
-  // LOG PARA VERIFICAR SE OS DADOS ESTAO CHEGANDO
-  console.log('Dashboard - user:', user)
-  console.log('Dashboard - userEmail:', userEmail)
-  console.log('Dashboard - token:', token ? token.substring(0, 20) + '...' : 'null')
+  const { user, isLoading } = useAuth()
   const refHeader = useRef(null)
   const refCardAcessos = useRef(null)
   const refCardGrupos = useRef(null)
@@ -46,16 +41,21 @@ export default function UserDashBoard() {
 
   const [openTour, setOpenTour] = useState(false)
   const [saudacao, setSaudacao] = useState('')
-  const [loading, setLoading] = useState(true)
 
+  // Quando o AuthContext terminar de carregar e tiver usuario, define a saudacao
   useEffect(() => {
-    if (user) {
-      setLoading(false)
-      // Escolhe um titulo aleatorio
+    if (!isLoading && user) {
       const indice = Math.floor(Math.random() * titulos.length)
       setSaudacao(titulos[indice])
     }
-  }, [user])
+  }, [isLoading, user])
+
+  // Log para debug
+  console.log('Dashboard - user recebido:', user)
+  console.log('Dashboard - isLoading:', isLoading)
+
+  // Se ainda esta carregando, mostra esqueleto
+  const estaCarregando = isLoading || !user
 
   const handleCloseTour = () => {
     setOpenTour(false)
@@ -108,12 +108,12 @@ export default function UserDashBoard() {
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {/* Cabecalho */}
-            {loading ? (
+            {estaCarregando ? (
               <Skeleton style={{ marginBottom: '32px' }} active paragraph={{ rows: 1 }} />
             ) : (
               <div className="mb-8" ref={refHeader}>
                 <Title level={2} style={{ color: '#002140', marginBottom: 0 }}>
-                  {saudacao} <span className="text-blue-600">{user?.name || 'Usuario'}</span>
+                  {saudacao} <span className="text-blue-600">{user?.name}</span>
                 </Title>
                 <Text type="secondary">Visao geral das suas permissoes.</Text>
               </div>
@@ -132,16 +132,12 @@ export default function UserDashBoard() {
                     variant="borderless"
                     className="shadow-sm rounded-lg"
                   >
-                    {loading ? (
+                    {estaCarregando ? (
                       <Skeleton active paragraph={{ rows: 4 }} />
                     ) : (
                       <div className="flex flex-col gap-6">
                         {/* Informacoes do usuario */}
-                        <Descriptions
-                          column={{ xs: 1, sm: 2 }}
-                          bordered
-                          size="small"
-                        >
+                        <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
                           <Descriptions.Item 
                             label={<><IdcardOutlined /> ID</>}
                             span={1}
@@ -243,7 +239,7 @@ export default function UserDashBoard() {
                   variant="borderless"
                   className="shadow-sm rounded-lg"
                 >
-                  {loading ? (
+                  {estaCarregando ? (
                     <Skeleton active paragraph={{ rows: 4 }} />
                   ) : (
                     <div className="flex flex-col gap-4">
@@ -281,7 +277,7 @@ export default function UserDashBoard() {
                     variant="borderless"
                     className="shadow-sm rounded-lg border-l-4 border-l-[#002140]"
                   >
-                    {loading ? (
+                    {estaCarregando ? (
                       <div className="p-6">
                         <Skeleton active paragraph={{ rows: 4 }} />
                       </div>
