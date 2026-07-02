@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
@@ -34,6 +34,11 @@ const titulos = ['Ola, ', 'Seja bem-vindo, ', 'Bem-vindo de volta, ']
 
 export default function UserDashBoard() {
   const { user, userEmail, token } = useAuth()
+
+  // LOG PARA VERIFICAR SE OS DADOS ESTAO CHEGANDO
+  console.log('Dashboard - user:', user)
+  console.log('Dashboard - userEmail:', userEmail)
+  console.log('Dashboard - token:', token ? token.substring(0, 20) + '...' : 'null')
   const refHeader = useRef(null)
   const refCardAcessos = useRef(null)
   const refCardGrupos = useRef(null)

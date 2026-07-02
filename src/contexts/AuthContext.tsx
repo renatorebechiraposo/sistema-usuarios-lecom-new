@@ -1,7 +1,6 @@
-// src/contexts/AuthContext.tsx
-'use client'
+﻿'use client'
 
-import { extrairEmailDoToken } from '@/services/lecomApi'
+import { buscarMeuPerfil, extrairEmailDoToken } from '@/services/lecomApi'
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react'
 
 interface AuthContextType {
@@ -23,33 +22,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Ao carregar a página, verifica se já tem token salvo
+  // Ao carregar a pagina, verifica se ja tem token salvo
+  // e ja busca os dados do usuario
   useEffect(() => {
     const savedToken = sessionStorage.getItem('authToken')
     if (savedToken) {
       setTokenState(savedToken)
 
-      // Tenta extrair o email do token salvo
       const email = extrairEmailDoToken(savedToken)
       if (email) {
         setUserEmail(email)
       }
+
+      // Busca os dados do usuario automaticamente
+      buscarMeuPerfil(savedToken)
+        .then(function(userData) {
+          console.log('AuthContext - Dados do usuario carregados:', userData)
+          setUser(userData)
+        })
+        .catch(function(err) {
+          console.error('AuthContext - Erro ao buscar usuario:', err)
+          // Se token expirou, limpa tudo
+          if (err.message && err.message.includes('expirado')) {
+            sessionStorage.removeItem('authToken')
+            setTokenState(null)
+          }
+        })
+        .finally(function() {
+          setIsLoading(false)
+        })
+    } else {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
-  const setToken = useCallback((newToken: string) => {
+  const setToken = useCallback(function(newToken: string) {
     setTokenState(newToken)
     sessionStorage.setItem('authToken', newToken)
 
-    // Extrai o email do token e salva no estado
     const email = extrairEmailDoToken(newToken)
     if (email) {
       setUserEmail(email)
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(function() {
     setTokenState(null)
     setUser(null)
     setUserEmail(null)
