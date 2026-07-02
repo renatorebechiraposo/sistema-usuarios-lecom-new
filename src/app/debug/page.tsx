@@ -1,7 +1,7 @@
 ﻿'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { extrairEmailDoToken } from '@/services/lecomApi'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const API_BASE_URL = 'http://localhost:4000'
 
@@ -25,15 +25,16 @@ export default function DebugPage() {
     adicionarLog('Token bruto (inicio)', token.substring(0, 50) + '...', 'info')
     adicionarLog('Token tem quantas partes?', token.split('.').length + ' partes', 'info')
 
-    // Testar extrair email
     const emailExtraido = extrairEmailDoToken(token)
     if (emailExtraido) {
       adicionarLog('Email extraido do token', emailExtraido, 'sucesso')
       setEmail(emailExtraido)
+      
+      // Ja preenche o endpoint com o email correto
+      setApiteste('/lecom/user?email=' + emailExtraido)
     } else {
       adicionarLog('Falha ao extrair email', 'Token nao parece ser JWT ou nao contem email', 'erro')
       
-      // Mostra o payload do token mesmo que nao tenha email
       try {
         const partes = token.split('.')
         if (partes.length === 3) {
@@ -71,7 +72,26 @@ export default function DebugPage() {
       if (response.ok) {
         const data = await response.json()
         adicionarLog('Dados recebidos', JSON.stringify(data, null, 2), 'sucesso')
-        adicionarLog('Chaves do objeto', Object.keys(data).join(', '), 'info')
+        
+        // Mostra as chaves
+        if (typeof data === 'object' && data !== null) {
+          adicionarLog('Chaves do objeto', Object.keys(data).join(', '), 'info')
+          
+          // Detalha cada campo
+          for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+              var value = data[key]
+              if (Array.isArray(value)) {
+                adicionarLog('  ARRAY: ' + key + '[' + value.length + ']', 
+                  value.length > 0 ? 'Primeiro: ' + JSON.stringify(value[0]) : 'Vazio', 'info')
+              } else if (typeof value === 'object' && value !== null) {
+                adicionarLog('  OBJETO: ' + key, JSON.stringify(value), 'info')
+              } else {
+                adicionarLog('  CAMPO: ' + key, String(value), 'info')
+              }
+            }
+          }
+        }
       } else {
         const text = await response.text().catch(() => 'sem detalhes')
         adicionarLog('Erro detalhado', text, 'erro')
@@ -85,38 +105,36 @@ export default function DebugPage() {
 
   return (
     <div style={{ padding: 20, fontFamily: 'monospace' }}>
-      <h1>🛠️ Debug da API - Teste Endpoints</h1>
+      <h1>Pagina de Debug da API</h1>
       
       {!token && (
         <div style={{ background: '#fff3cd', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-          <strong>⚠️ Voce nao esta logado.</strong> Faca login primeiro em <a href="/">/</a>
+          Voce nao esta logado. <a href="/">Faca login primeiro</a>
         </div>
       )}
       
       {token && (
         <>
-          {/* SECAO 1: TESTAR TOKEN */}
           <div style={{ marginBottom: 24, padding: 16, background: '#f0f0f0', borderRadius: 8 }}>
             <h3>Passo 1: Extrair email do token</h3>
             <p style={{ fontSize: 12, color: '#666' }}>
               Token: {token.substring(0, 40)}...
             </p>
-            <button onClick={testarToken} style={{ padding: '6px 12px' }}>
+            <button onClick={testarToken} style={{ padding: '6px 12px', cursor: 'pointer' }}>
               Testar extracao de email
             </button>
             
             {email && (
               <div style={{ marginTop: 8, padding: 8, background: '#d4edda', borderRadius: 4 }}>
-                ✅ Email extraido: <strong>{email}</strong>
+                Email extraido: <strong>{email}</strong>
               </div>
             )}
           </div>
 
-          {/* SECAO 2: TESTAR ENDPOINT MANUAL */}
           <div style={{ marginBottom: 24, padding: 16, background: '#f0f0f0', borderRadius: 8 }}>
-            <h3>Passo 2: Testar endpoint manualmente</h3>
+            <h3>Passo 2: Testar endpoint</h3>
             <p style={{ fontSize: 12, color: '#666' }}>
-              Digite o caminho do endpoint (ex: /api/Usuario/ObterPorEmail/teste@email.com)
+              Digite o caminho do endpoint
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <span style={{ padding: '6px 0' }}>http://localhost:4000</span>
@@ -124,47 +142,19 @@ export default function DebugPage() {
                 type="text" 
                 value={apiteste}
                 onChange={(e) => setApiteste(e.target.value)}
-                placeholder="/api/Usuario/ObterPorEmail/email@exemplo.com"
+                placeholder="/lecom/user?email=..."
                 style={{ flex: 1, padding: '4px 8px', fontFamily: 'monospace' }}
               />
-              <button onClick={testarEndpoint} disabled={carregando || !apiteste} style={{ padding: '6px 12px' }}>
+              <button onClick={testarEndpoint} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer' }}>
                 {carregando ? 'Testando...' : 'Testar'}
               </button>
-            </div>
-
-            {/* Sugestoes de endpoints para testar */}
-            <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Sugestoes para copiar:</p>
-              {[
-                '/lecom/user/email=' + (email || 'SEU_EMAIL'),
-                '/api/Usuario/ObterPorEmail/' + (email || 'SEU_EMAIL'),
-                '/api/Usuario/ObterPorToken',
-                '/api/Usuario/Me',
-                '/api/Auth/Me',
-                '/api/v1/Usuario/' + (email || 'SEU_EMAIL'),
-              ].map(sugestao => (
-                <div 
-                  key={sugestao}
-                  onClick={() => setApiteste(sugestao)}
-                  style={{ 
-                    padding: '2px 8px', 
-                    cursor: 'pointer', 
-                    fontSize: 12,
-                    color: '#0066cc',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  {sugestao}
-                </div>
-              ))}
             </div>
           </div>
         </>
       )}
 
-      {/* LOGS */}
       <div style={{ marginTop: 24 }}>
-        <h3>📋 Logs:</h3>
+        <h3>Logs:</h3>
         {resultados.length === 0 && <p style={{ color: '#999' }}>Nenhum teste feito ainda.</p>}
         
         {resultados.map((log, i) => (

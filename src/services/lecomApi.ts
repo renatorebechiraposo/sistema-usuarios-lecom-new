@@ -54,6 +54,10 @@ export function extrairEmailDoToken(token: string): string | null {
 // USUARIO
 // ==========================================
 
+/**
+ * Buscar perfil do usuario pelo email
+ * GET /lecom/user?email={email}
+ */
 export async function buscarMeuPerfil(token: string) {
   const email = extrairEmailDoToken(token)
 
@@ -61,34 +65,33 @@ export async function buscarMeuPerfil(token: string) {
     throw new Error('Nao foi possivel extrair o email do token. Verifique se o token e valido.')
   }
 
-  console.log('Buscando perfil para o email:', email)
-  console.log('URL da requisicao:', API_BASE_URL + '/lecom/user/email=' + encodeURIComponent(email))
+  const url = API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email)
 
-  const response = await fetch(API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email), {
+  console.log('URL da requisicao:', url)
+
+  const response = await fetch(url, {
     headers: getHeaders(token),
   })
 
   console.log('Status da resposta:', response.status, response.statusText)
 
   if (!response.ok) {
-    const errorText = await response.text().catch(function () {
-      return 'Sem detalhes do erro'
-    })
+    const errorText = await response.text().catch(function() { return 'Sem detalhes do erro' })
     console.error('Erro na resposta:', errorText)
     throw new Error('Erro ao buscar perfil: ' + response.status + ' - ' + errorText)
   }
 
   const data = await response.json()
 
-  // LOG COMPLETO PARA VOCE VER O QUE A API RETORNA
+  // LOG COMPLETO
   console.log('RESPOSTA COMPLETA DA API (buscarMeuPerfil)')
   console.log('JSON formatado:', JSON.stringify(data, null, 2))
   console.log('Chaves do objeto:', Object.keys(data))
 
   console.log('Detalhamento dos campos:')
-  for (const key in data) {
+  for (var key in data) {
     if (data.hasOwnProperty(key)) {
-      const value = data[key]
+      var value = data[key]
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         console.log('  OBJETO ' + key + ':', JSON.stringify(value))
         console.log('     Chaves internas:', Object.keys(value))
@@ -107,8 +110,14 @@ export async function buscarMeuPerfil(token: string) {
   return data
 }
 
+/**
+ * Buscar usuario por email (para buscar outras pessoas)
+ * GET /lecom/user?email={email}
+ */
 export async function buscarUsuarioPorEmail(token: string, email: string) {
-  const response = await fetch(API_BASE_URL + '/lecom/user/email=' + encodeURIComponent(email), {
+  const url = API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email)
+  
+  const response = await fetch(url, {
     headers: getHeaders(token),
   })
 
@@ -136,7 +145,9 @@ export async function listarPlantas(token: string) {
 }
 
 export async function listarPlantasDoUsuario(token: string, email: string) {
-  const response = await fetch(API_BASE_URL + '/lecom/plantas/email=' + encodeURIComponent(email), {
+  const url = API_BASE_URL + '/lecom/plantas?email=' + encodeURIComponent(email)
+  
+  const response = await fetch(url, {
     headers: getHeaders(token),
   })
 
@@ -190,11 +201,7 @@ export async function listarGruposDoUsuario(token: string, usuarioId: number) {
   return response.json()
 }
 
-export async function adicionarUsuarioAoGrupo(
-  token: string,
-  grupoId: number,
-  emailUsuario: string,
-) {
+export async function adicionarUsuarioAoGrupo(token: string, grupoId: number, emailUsuario: string) {
   const response = await fetch(API_BASE_URL + '/api/Grupo/AdicionarUsuario', {
     method: 'POST',
     headers: getHeaders(token),
