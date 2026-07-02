@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { extrairEmailDoToken } from '@/services/lecomApi'
 import { useState } from 'react'
@@ -23,14 +23,13 @@ export default function DebugPage() {
     }
 
     adicionarLog('Token bruto (inicio)', token.substring(0, 50) + '...', 'info')
+    adicionarLog('Token completo', token, 'info')
     adicionarLog('Token tem quantas partes?', token.split('.').length + ' partes', 'info')
 
     const emailExtraido = extrairEmailDoToken(token)
     if (emailExtraido) {
       adicionarLog('Email extraido do token', emailExtraido, 'sucesso')
       setEmail(emailExtraido)
-      
-      // Ja preenche o endpoint com o email correto
       setApiteste('/lecom/user?email=' + emailExtraido)
     } else {
       adicionarLog('Falha ao extrair email', 'Token nao parece ser JWT ou nao contem email', 'erro')
@@ -58,6 +57,13 @@ export default function DebugPage() {
     
     adicionarLog('Chamando endpoint', url, 'info')
     
+    // Mostra os headers que estao sendo enviados
+    const headersEnviados = {
+      'Authorization': 'Bearer ' + token.substring(0, 30) + '...',
+      'Content-Type': 'application/json',
+    }
+    adicionarLog('Headers enviados', headersEnviados, 'info')
+    
     try {
       const response = await fetch(url, {
         headers: {
@@ -69,35 +75,48 @@ export default function DebugPage() {
       adicionarLog('Status da resposta', response.status + ' ' + response.statusText, 
         response.ok ? 'sucesso' : 'erro')
       
-      if (response.ok) {
-        const data = await response.json()
-        adicionarLog('Dados recebidos', JSON.stringify(data, null, 2), 'sucesso')
+      const text = await response.text()
+      adicionarLog('Resposta bruta (raw)', text, response.ok ? 'sucesso' : 'erro')
+      
+      // Tenta parsear como JSON
+      try {
+        const data = JSON.parse(text)
+        adicionarLog('Resposta como JSON', JSON.stringify(data, null, 2), 'sucesso')
         
-        // Mostra as chaves
         if (typeof data === 'object' && data !== null) {
           adicionarLog('Chaves do objeto', Object.keys(data).join(', '), 'info')
-          
-          // Detalha cada campo
-          for (var key in data) {
-            if (data.hasOwnProperty(key)) {
-              var value = data[key]
-              if (Array.isArray(value)) {
-                adicionarLog('  ARRAY: ' + key + '[' + value.length + ']', 
-                  value.length > 0 ? 'Primeiro: ' + JSON.stringify(value[0]) : 'Vazio', 'info')
-              } else if (typeof value === 'object' && value !== null) {
-                adicionarLog('  OBJETO: ' + key, JSON.stringify(value), 'info')
-              } else {
-                adicionarLog('  CAMPO: ' + key, String(value), 'info')
-              }
-            }
-          }
         }
-      } else {
-        const text = await response.text().catch(() => 'sem detalhes')
-        adicionarLog('Erro detalhado', text, 'erro')
+      } catch (e) {
+        // Nao e JSON, mostra como texto mesmo
+        adicionarLog('Resposta nao e JSON', 'Resposta em texto puro', 'info')
       }
     } catch (err) {
       adicionarLog('Erro na requisicao', String(err), 'erro')
+    }
+    
+    setCarregando(false)
+  }
+
+  async function testarSemBearer() {
+    if (!apiteste) return
+    
+    setCarregando(true)
+    const url = API_BASE_URL + apiteste
+    
+    adicionarLog('Testando SEM Bearer token', url, 'info')
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      adicionarLog('Status sem Bearer', response.status + ' ' + response.statusText, 'info')
+      const text = await response.text()
+      adicionarLog('Resposta sem Bearer', text, 'info')
+    } catch (err) {
+      adicionarLog('Erro', String(err), 'erro')
     }
     
     setCarregando(false)
@@ -120,7 +139,7 @@ export default function DebugPage() {
             <p style={{ fontSize: 12, color: '#666' }}>
               Token: {token.substring(0, 40)}...
             </p>
-            <button onClick={testarToken} style={{ padding: '6px 12px', cursor: 'pointer' }}>
+            <button onClick={testarToken} style={{ padding: '6px 12px', cursor: 'pointer', marginRight: 8 }}>
               Testar extracao de email
             </button>
             
@@ -136,7 +155,7 @@ export default function DebugPage() {
             <p style={{ fontSize: 12, color: '#666' }}>
               Digite o caminho do endpoint
             </p>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <span style={{ padding: '6px 0' }}>http://localhost:3000</span>
               <input 
                 type="text" 
@@ -145,8 +164,13 @@ export default function DebugPage() {
                 placeholder="/lecom/user?email=..."
                 style={{ flex: 1, padding: '4px 8px', fontFamily: 'monospace' }}
               />
-              <button onClick={testarEndpoint} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer' }}>
-                {carregando ? 'Testando...' : 'Testar'}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={testarEndpoint} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer', background: '#002855', color: 'white', border: 'none', borderRadius: 4 }}>
+                {carregando ? 'Testando...' : 'Testar COM Bearer'}
+              </button>
+              <button onClick={testarSemBearer} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer', background: '#666', color: 'white', border: 'none', borderRadius: 4 }}>
+                Testar SEM Bearer
               </button>
             </div>
           </div>
@@ -174,7 +198,8 @@ export default function DebugPage() {
               background: '#fff', 
               padding: 4,
               overflow: 'auto',
-              maxHeight: 200
+              maxHeight: 200,
+              wordBreak: 'break-all'
             }}>
               {typeof log.dados === 'string' ? log.dados : JSON.stringify(log.dados, null, 2)}
             </pre>
