@@ -1,5 +1,4 @@
 'use client'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button, Image, Typography, message } from 'antd'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -7,16 +6,25 @@ import { useEffect, useState } from 'react'
 const { Title, Text } = Typography
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
 
-  // Se já estiver autenticado, redireciona para o dashboard
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace('/dashboard')
-    }
-  }, [isAuthenticated, isLoading, router])
+    const token = new URLSearchParams(window.location.search).get('token')
+
+    if (!token) return
+
+    fetch('/api/auth/exchange', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    }).then(() => {
+      window.history.replaceState({}, '', '/login')
+      router.push('/dashboard')
+    })
+  }, [router])
 
   const handleMicrosoftLogin = () => {
     const loginUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL
@@ -28,18 +36,6 @@ export default function LoginPage() {
 
     setIsRedirecting(true)
     window.location.href = loginUrl
-  }
-
-  // Evita mostrar a tela de login se já estiver carregando/autenticado
-  if (isLoading || isAuthenticated) {
-    return (
-      <div className="w-screen h-screen flex justify-center items-center bg-[#EDF2F7]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002855] mx-auto mb-4" />
-          <Text type="secondary">Carregando...</Text>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -61,13 +57,7 @@ export default function LoginPage() {
         {/* Lado direito - Formulário de Login */}
         <div className="w-full md:w-1/2 h-full flex flex-col justify-center items-center gap-6 p-8 md:p-12">
           {/* Logo Lecom */}
-          <Image
-            src="/images/login/lecom.png"
-            width={320}
-            alt="Logo Lecom"
-            preview={false}
-            className="mb-4"
-          />
+          <Image src="/images/login/lecom.png" width={320} alt="Logo Lecom" preview={false} className="mb-4" />
 
           {/* Divisor visual */}
           <div className="w-16 h-1 bg-[#002855] rounded-full mb-2" />

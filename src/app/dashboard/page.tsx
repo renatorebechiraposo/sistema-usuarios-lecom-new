@@ -1,29 +1,10 @@
 'use client'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
-import { useAuth } from '@/contexts/AuthContext'
 import { lecomService } from '@/services/lecomApi'
 import { LecomFunction, LecomGroup } from '@/types/lecom'
-import {
-  CheckCircleFilled,
-  QuestionCircleOutlined,
-  SafetyCertificateOutlined,
-  TeamOutlined,
-} from '@ant-design/icons'
-import {
-  Avatar,
-  Card,
-  Col,
-  FloatButton,
-  Row,
-  Skeleton,
-  Table,
-  TableColumnsType,
-  Tag,
-  Tour,
-  TourProps,
-  Typography,
-} from 'antd'
+import { CheckCircleFilled, QuestionCircleOutlined, SafetyCertificateOutlined, TeamOutlined } from '@ant-design/icons'
+import { Avatar, Card, Col, FloatButton, Row, Skeleton, Table, TableColumnsType, Tag, Tour, TourProps, Typography } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 
 const { Title, Text } = Typography
@@ -31,8 +12,6 @@ const { Title, Text } = Typography
 const titulos = ['Olá, ', 'Seja bem-vindo, ', 'Bem-vindo de volta, ']
 
 export default function UserDashBoard() {
-  const { user } = useAuth()
-
   const refHeader = useRef(null)
   const refCardAcessos = useRef(null)
   const refCardGrupos = useRef(null)
@@ -65,10 +44,7 @@ export default function UserDashBoard() {
       if (!user) return
 
       try {
-        const [functions, userGroups] = await Promise.all([
-          lecomService.getUserFunctions(user.id),
-          lecomService.getUserGroups(user.id),
-        ])
+        const [functions, userGroups] = await Promise.all([lecomService.getUserFunctions(user.id), lecomService.getUserGroups(user.id)])
 
         let leaderName = 'Não atribuído'
         if (user.idLeader) {
@@ -198,11 +174,7 @@ export default function UserDashBoard() {
                             {stats.functions.length > 0 ? (
                               <div className="flex flex-wrap gap-2">
                                 {stats.functions.map((f) => (
-                                  <Tag
-                                    key={f.id}
-                                    color="blue"
-                                    className="m-0 text-sm py-1 px-3 rounded-full"
-                                  >
+                                  <Tag key={f.id} color="blue" className="m-0 text-sm py-1 px-3 rounded-full">
                                     {f.name}
                                   </Tag>
                                 ))}
