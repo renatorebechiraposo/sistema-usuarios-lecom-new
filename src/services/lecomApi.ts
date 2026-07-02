@@ -64,14 +64,16 @@ export async function buscarMeuPerfil(token: string) {
   console.log('Buscando perfil para o email:', email)
   console.log('URL da requisicao:', API_BASE_URL + '/lecom/user/email=' + encodeURIComponent(email))
 
-  const response = await fetch(API_BASE_URL + '/lecom/user/email=' + encodeURIComponent(email), {
+  const response = await fetch(API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email), {
     headers: getHeaders(token),
   })
 
   console.log('Status da resposta:', response.status, response.statusText)
 
   if (!response.ok) {
-    const errorText = await response.text().catch(function() { return 'Sem detalhes do erro' })
+    const errorText = await response.text().catch(function () {
+      return 'Sem detalhes do erro'
+    })
     console.error('Erro na resposta:', errorText)
     throw new Error('Erro ao buscar perfil: ' + response.status + ' - ' + errorText)
   }
@@ -84,9 +86,9 @@ export async function buscarMeuPerfil(token: string) {
   console.log('Chaves do objeto:', Object.keys(data))
 
   console.log('Detalhamento dos campos:')
-  for (var key in data) {
+  for (const key in data) {
     if (data.hasOwnProperty(key)) {
-      var value = data[key]
+      const value = data[key]
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         console.log('  OBJETO ' + key + ':', JSON.stringify(value))
         console.log('     Chaves internas:', Object.keys(value))
@@ -188,7 +190,11 @@ export async function listarGruposDoUsuario(token: string, usuarioId: number) {
   return response.json()
 }
 
-export async function adicionarUsuarioAoGrupo(token: string, grupoId: number, emailUsuario: string) {
+export async function adicionarUsuarioAoGrupo(
+  token: string,
+  grupoId: number,
+  emailUsuario: string,
+) {
   const response = await fetch(API_BASE_URL + '/api/Grupo/AdicionarUsuario', {
     method: 'POST',
     headers: getHeaders(token),
