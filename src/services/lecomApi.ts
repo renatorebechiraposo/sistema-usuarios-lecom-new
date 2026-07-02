@@ -50,15 +50,49 @@ export function extrairEmailDoToken(token: string): string | null {
   }
 }
 
+/**
+ * Verifica se o token JWT esta expirado
+ */
+export function tokenEstaExpirado(token: string): boolean {
+  try {
+    const partes = token.split('.')
+    if (partes.length !== 3) return false
+
+    const base64 = partes[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payloadString = atob(base64)
+    const payload = JSON.parse(payloadString)
+
+    // JWT tem o campo 'exp' (expiration) em timestamp Unix
+    if (payload.exp) {
+      const dataExpiracao = new Date(payload.exp * 1000)
+      const agora = new Date()
+      
+      console.log('Token expira em:', dataExpiracao.toLocaleString())
+      console.log('Agora:', agora.toLocaleString())
+      
+      return dataExpiracao < agora
+    }
+
+    return false
+  } catch (error) {
+    console.error('Erro ao verificar expiracao:', error)
+    return false
+  }
+}
+
 // ==========================================
 // USUARIO
 // ==========================================
 
 export async function buscarMeuPerfil(token: string) {
-  const email = extrairEmailDoToken(token)
+  // Verifica se o token ja expirou ANTES de chamar a API
+  if (tokenEstaExpirado(token)) {
+    throw new Error('Token expirado. Faca login novamente.')
+  }
 
+  const email = extrairEmailDoToken(token)
   if (!email) {
-    throw new Error('Nao foi possivel extrair o email do token. Verifique se o token e valido.')
+    throw new Error('Nao foi possivel extrair o email do token.')
   }
 
   const url = API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email)
@@ -71,6 +105,11 @@ export async function buscarMeuPerfil(token: string) {
 
   console.log('Status da resposta:', response.status, response.statusText)
 
+  // Se for 401, o token expirou
+  if (response.status === 401) {
+    throw new Error('Token expirado ou invalido. Faca login novamente.')
+  }
+
   if (!response.ok) {
     const errorText = await response.text().catch(function () {
       return 'Sem detalhes do erro'
@@ -80,30 +119,6 @@ export async function buscarMeuPerfil(token: string) {
   }
 
   const data = await response.json()
-
-  console.log('RESPOSTA COMPLETA DA API (buscarMeuPerfil)')
-  console.log('JSON formatado:', JSON.stringify(data, null, 2))
-  console.log('Chaves do objeto:', Object.keys(data))
-
-  console.log('Detalhamento dos campos:')
-  for (const key in data) {
-    if (data.hasOwnProperty(key)) {
-      const value = data[key]
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        console.log('  OBJETO ' + key + ':', JSON.stringify(value))
-        console.log('     Chaves internas:', Object.keys(value))
-      } else if (Array.isArray(value)) {
-        console.log('  ARRAY ' + key + '[' + value.length + ']')
-        if (value.length > 0) {
-          console.log('     Primeiro item:', JSON.stringify(value[0], null, 2))
-          console.log('     Chaves do item:', Object.keys(value[0]))
-        }
-      } else {
-        console.log('  ' + key + ':', typeof value, '=', value)
-      }
-    }
-  }
-
   return data
 }
 
