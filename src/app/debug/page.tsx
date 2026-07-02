@@ -49,47 +49,29 @@ export default function DebugPage() {
     }
   }
 
-  async function testarEndpoint() {
+  async function testarComHeader(headerName: string, headerValue: string, label: string) {
     if (!token || !apiteste) return
     
     setCarregando(true)
     const url = API_BASE_URL + apiteste
     
-    adicionarLog('Chamando endpoint', url, 'info')
-    
-    // Mostra os headers que estao sendo enviados
-    const headersEnviados = {
-      'Authorization': 'Bearer ' + token.substring(0, 30) + '...',
-      'Content-Type': 'application/json',
-    }
-    adicionarLog('Headers enviados', headersEnviados, 'info')
+    adicionarLog('Testando: ' + label, url, 'info')
+    adicionarLog('Header usado', headerName + ': ' + headerValue.substring(0, 30) + '...', 'info')
     
     try {
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json',
-        }
-      })
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      headers[headerName] = headerValue
       
-      adicionarLog('Status da resposta', response.status + ' ' + response.statusText, 
+      const response = await fetch(url, { headers })
+      
+      adicionarLog('Status', response.status + ' ' + response.statusText, 
         response.ok ? 'sucesso' : 'erro')
       
       const text = await response.text()
-      adicionarLog('Resposta bruta (raw)', text, response.ok ? 'sucesso' : 'erro')
-      
-      // Tenta parsear como JSON
-      try {
-        const data = JSON.parse(text)
-        adicionarLog('Resposta como JSON', JSON.stringify(data, null, 2), 'sucesso')
-        
-        if (typeof data === 'object' && data !== null) {
-          adicionarLog('Chaves do objeto', Object.keys(data).join(', '), 'info')
-        }
-      } catch (e) {
-        // Nao e JSON, mostra como texto mesmo
-        adicionarLog('Resposta nao e JSON', 'Resposta em texto puro', 'info')
-      }
+      adicionarLog('Resposta', text.length > 500 ? text.substring(0, 500) + '...' : text, 
+        response.ok ? 'sucesso' : 'erro')
     } catch (err) {
       adicionarLog('Erro na requisicao', String(err), 'erro')
     }
@@ -97,24 +79,37 @@ export default function DebugPage() {
     setCarregando(false)
   }
 
-  async function testarSemBearer() {
-    if (!apiteste) return
+  async function testarBearer() {
+    await testarComHeader('Authorization', 'Bearer ' + token, 'Authorization: Bearer TOKEN')
+  }
+
+  async function testarTokenDireto() {
+    await testarComHeader('Authorization', token, 'Authorization: TOKEN (sem Bearer)')
+  }
+
+  async function testarXAuthToken() {
+    await testarComHeader('X-Auth-Token', token, 'X-Auth-Token: TOKEN')
+  }
+
+  async function testarTokenQueryString() {
+    if (!token || !email) return
     
     setCarregando(true)
-    const url = API_BASE_URL + apiteste
+    const url = API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email) + '&token=' + encodeURIComponent(token)
     
-    adicionarLog('Testando SEM Bearer token', url, 'info')
+    adicionarLog('Testando token via query string', url, 'info')
     
     try {
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       
-      adicionarLog('Status sem Bearer', response.status + ' ' + response.statusText, 'info')
+      adicionarLog('Status', response.status + ' ' + response.statusText,
+        response.ok ? 'sucesso' : 'erro')
+      
       const text = await response.text()
-      adicionarLog('Resposta sem Bearer', text, 'info')
+      adicionarLog('Resposta', text.length > 500 ? text.substring(0, 500) + '...' : text,
+        response.ok ? 'sucesso' : 'erro')
     } catch (err) {
       adicionarLog('Erro', String(err), 'erro')
     }
@@ -124,7 +119,7 @@ export default function DebugPage() {
 
   return (
     <div style={{ padding: 20, fontFamily: 'monospace' }}>
-      <h1>Pagina de Debug da API</h1>
+      <h1>Debug - Testando formas de enviar o token</h1>
       
       {!token && (
         <div style={{ background: '#fff3cd', padding: 12, borderRadius: 8, marginBottom: 16 }}>
@@ -151,26 +146,23 @@ export default function DebugPage() {
           </div>
 
           <div style={{ marginBottom: 24, padding: 16, background: '#f0f0f0', borderRadius: 8 }}>
-            <h3>Passo 2: Testar endpoint</h3>
+            <h3>Passo 2: Testar diferentes formas de enviar token</h3>
             <p style={{ fontSize: 12, color: '#666' }}>
-              Digite o caminho do endpoint
+              Endpoint: http://localhost:3000{apiteste || '/lecom/user?email=...'}
             </p>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <span style={{ padding: '6px 0' }}>http://localhost:3000</span>
-              <input 
-                type="text" 
-                value={apiteste}
-                onChange={(e) => setApiteste(e.target.value)}
-                placeholder="/lecom/user?email=..."
-                style={{ flex: 1, padding: '4px 8px', fontFamily: 'monospace' }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={testarEndpoint} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer', background: '#002855', color: 'white', border: 'none', borderRadius: 4 }}>
-                {carregando ? 'Testando...' : 'Testar COM Bearer'}
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={testarBearer} disabled={carregando || !apiteste} style={{ padding: '8px 12px', cursor: 'pointer', background: '#002855', color: 'white', border: 'none', borderRadius: 4, textAlign: 'left' }}>
+                1. Authorization: Bearer TOKEN (padrao)
               </button>
-              <button onClick={testarSemBearer} disabled={carregando || !apiteste} style={{ padding: '6px 12px', cursor: 'pointer', background: '#666', color: 'white', border: 'none', borderRadius: 4 }}>
-                Testar SEM Bearer
+              <button onClick={testarTokenDireto} disabled={carregando || !apiteste} style={{ padding: '8px 12px', cursor: 'pointer', background: '#0066cc', color: 'white', border: 'none', borderRadius: 4, textAlign: 'left' }}>
+                2. Authorization: TOKEN (sem Bearer)
+              </button>
+              <button onClick={testarXAuthToken} disabled={carregando || !apiteste} style={{ padding: '8px 12px', cursor: 'pointer', background: '#9933cc', color: 'white', border: 'none', borderRadius: 4, textAlign: 'left' }}>
+                3. X-Auth-Token: TOKEN
+              </button>
+              <button onClick={testarTokenQueryString} disabled={carregando || !email} style={{ padding: '8px 12px', cursor: 'pointer', background: '#cc6600', color: 'white', border: 'none', borderRadius: 4, textAlign: 'left' }}>
+                4. Token na URL: ?email=...&token=TOKEN
               </button>
             </div>
           </div>
