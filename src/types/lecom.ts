@@ -1,7 +1,9 @@
-export interface UsuarioLecom {
+﻿export interface UsuarioLecom {
   id: number
-  nome: string
+  name: string
+  username: string
   email: string
+  language: string
   gestorImediato?: {
     id: number
     nome: string

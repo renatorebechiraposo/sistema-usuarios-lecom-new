@@ -28,6 +28,7 @@ export default function HomePage() {
 
     const token = urlToken.trim()
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Token invalido')
       window.history.replaceState({}, '', '/')
       return
@@ -42,10 +43,10 @@ export default function HomePage() {
     buscarMeuPerfil(token)
       .then((userData) => {
         console.log('Usuario autenticado:', userData)
-        
+
         // Salva os dados do usuario no contexto
         setUser(userData)
-        
+
         // Remove token da URL
         window.history.replaceState({}, '', '/')
         router.push('/dashboard')
@@ -78,7 +79,7 @@ export default function HomePage() {
     new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('token')
   ) {
     return (
-      <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-br from-[#EDF2F7] to-[#DCE6F0]">
+      <div className="w-screen h-screen flex items-center justify-center bg-linear-to-br from-[#EDF2F7] to-[#DCE6F0]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002855] mx-auto mb-4" />
           <Text>Autenticando...</Text>
@@ -88,8 +89,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="w-screen h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#EDF2F7] to-[#DCE6F0]">
-      <div className="w-[90%] max-w-5xl h-[70vh] min-h-[500px] flex bg-white rounded-3xl shadow-2xl overflow-hidden">
+    <div className="w-screen h-screen flex flex-col justify-center items-center bg-linear-to-br from-[#EDF2F7] to-[#DCE6F0]">
+      <div className="w-[90%] max-w-5xl h-[70vh] min-h-125 flex bg-white rounded-3xl shadow-2xl overflow-hidden">
         <div className="hidden md:flex w-1/2 bg-[#002855] relative overflow-hidden">
           <Image
             src="/images/login/marelli.png"
@@ -103,7 +104,13 @@ export default function HomePage() {
         </div>
 
         <div className="w-full md:w-1/2 h-full flex flex-col justify-center items-center gap-6 p-8 md:p-12">
-          <Image src="/images/login/lecom.png" width={320} alt="Logo Lecom" preview={false} className="mb-4" />
+          <Image
+            src="/images/login/lecom.png"
+            width={320}
+            alt="Logo Lecom"
+            preview={false}
+            className="mb-4"
+          />
           <div className="w-16 h-1 bg-[#002855] rounded-full mb-2" />
 
           <div className="flex flex-col justify-center items-center text-center gap-1">
