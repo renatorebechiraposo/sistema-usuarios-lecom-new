@@ -1,5 +1,5 @@
 ﻿// src/services/lecomApi.ts
-const API_BASE_URL = 'http://localhost:4000'
+const API_BASE_URL = 'http://localhost:3000'
 
 interface ApiHeaders {
   Authorization?: string
@@ -76,7 +76,9 @@ export async function buscarMeuPerfil(token: string) {
   console.log('Status da resposta:', response.status, response.statusText)
 
   if (!response.ok) {
-    const errorText = await response.text().catch(function() { return 'Sem detalhes do erro' })
+    const errorText = await response.text().catch(function () {
+      return 'Sem detalhes do erro'
+    })
     console.error('Erro na resposta:', errorText)
     throw new Error('Erro ao buscar perfil: ' + response.status + ' - ' + errorText)
   }
@@ -89,9 +91,9 @@ export async function buscarMeuPerfil(token: string) {
   console.log('Chaves do objeto:', Object.keys(data))
 
   console.log('Detalhamento dos campos:')
-  for (var key in data) {
+  for (const key in data) {
     if (data.hasOwnProperty(key)) {
-      var value = data[key]
+      const value = data[key]
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         console.log('  OBJETO ' + key + ':', JSON.stringify(value))
         console.log('     Chaves internas:', Object.keys(value))
@@ -116,7 +118,7 @@ export async function buscarMeuPerfil(token: string) {
  */
 export async function buscarUsuarioPorEmail(token: string, email: string) {
   const url = API_BASE_URL + '/lecom/user?email=' + encodeURIComponent(email)
-  
+
   const response = await fetch(url, {
     headers: getHeaders(token),
   })
@@ -146,7 +148,7 @@ export async function listarPlantas(token: string) {
 
 export async function listarPlantasDoUsuario(token: string, email: string) {
   const url = API_BASE_URL + '/lecom/plantas?email=' + encodeURIComponent(email)
-  
+
   const response = await fetch(url, {
     headers: getHeaders(token),
   })
